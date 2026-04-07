@@ -5,7 +5,7 @@ The DGX Spark has unified memory with hardware coherence via ATS (Address Transl
 ## Benchmarks
 
 ### 1. Bandwidth
-Baseline read/write throughput to unified memory from both CPU and GPU. The GPU kernel streams through a 512 MB buffer with 512 blocks x 256 threads. CPU tests are single-threaded.
+Baseline read/write throughput to unified memory from both CPU and GPU. The GPU kernel streams through a 512 MB buffer with 512 blocks x 256 threads. CPU tests are run both single-threaded and multi-threaded across all 20 ARM cores via [parlay](https://github.com/cmuparlay/parlaylib).
 
 ### 2. Latency (pointer chasing)
 A random permutation cycle (Sattolo shuffle) over 16M entries. Both GPU (single-thread kernel) and CPU follow the chain for 1M hops.
@@ -37,10 +37,13 @@ Measured on DGX Spark (NVIDIA GB10, CUDA 13.0, ARM 20-core CPU).
 
 | Test | Throughput |
 |---|---|
-| GPU read | 157 GB/s |
-| GPU write | 133 GB/s |
-| CPU read | 29 GB/s |
-| CPU write | 82 GB/s |
+| GPU read | 147 GB/s |
+| GPU write | 137 GB/s |
+| CPU read (1 thread) | 29 GB/s |
+| CPU write (1 thread) | 81 GB/s |
+| CPU read (parlay, 20 threads) | 128 GB/s |
+| CPU write (parlay, 20 threads) | 134 GB/s |
+
 
 ### Latency (pointer chase)
 

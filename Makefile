@@ -1,5 +1,5 @@
 NVCC := nvcc
-CFLAGS := -std=c++17 -arch=sm_121 -O3 --extended-lambda -lineinfo
+CFLAGS := -std=c++17 -arch=sm_121 -O3 --extended-lambda -lineinfo -Iparlaylib/include
 TARGET := bench
 
 all: $(TARGET)

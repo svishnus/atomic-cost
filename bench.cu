@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <numeric>
 #include <random>
+#include <parlay/parallel.h>
+#include <parlay/primitives.h>
 
 // ---------------------------------------------------------------------------
 // Utilities
@@ -224,6 +226,53 @@ static void bench_bandwidth() {
         double gbps = BW_BUFFER_BYTES / avg_s / 1e9;
         printf("  CPU write: %.2f GB/s\n", gbps);
         g_results.push_back({"bw_cpu", "write", gbps, "GB/s"});
+    }
+
+    // --- CPU Parallel Read (parlay, all cores) ---
+    {
+        size_t nworkers = parlay::num_workers();
+        // Warmup
+        for (int i = 0; i < BW_WARMUP; i++) {
+            volatile uint64_t s = parlay::reduce(
+                parlay::delayed_seq<uint64_t>(BW_N, [&](size_t j) { return buf[j]; }));
+            (void)s;
+        }
+        CpuTimer timer;
+        double total_ms = 0;
+        volatile uint64_t sink = 0;
+        for (int i = 0; i < BW_ITERS; i++) {
+            timer.begin();
+            uint64_t s = parlay::reduce(
+                parlay::delayed_seq<uint64_t>(BW_N, [&](size_t j) { return buf[j]; }));
+            timer.end();
+            sink = s;
+            total_ms += timer.elapsed_ms();
+        }
+        double avg_s = (total_ms / BW_ITERS) / 1000.0;
+        double gbps = BW_BUFFER_BYTES / avg_s / 1e9;
+        printf("  CPU read  (parlay, %zu workers): %.2f GB/s\n", nworkers, gbps);
+        g_results.push_back({"bw_cpu_par", "read", gbps, "GB/s"});
+        (void)sink;
+    }
+
+    // --- CPU Parallel Write (parlay, all cores) ---
+    {
+        size_t nworkers = parlay::num_workers();
+        for (int i = 0; i < BW_WARMUP; i++) {
+            parlay::parallel_for(0, BW_N, [&](size_t j) { buf[j] = j; }, 8192);
+        }
+        CpuTimer timer;
+        double total_ms = 0;
+        for (int i = 0; i < BW_ITERS; i++) {
+            timer.begin();
+            parlay::parallel_for(0, BW_N, [&](size_t j) { buf[j] = j; }, 8192);
+            timer.end();
+            total_ms += timer.elapsed_ms();
+        }
+        double avg_s = (total_ms / BW_ITERS) / 1000.0;
+        double gbps = BW_BUFFER_BYTES / avg_s / 1e9;
+        printf("  CPU write (parlay, %zu workers): %.2f GB/s\n", nworkers, gbps);
+        g_results.push_back({"bw_cpu_par", "write", gbps, "GB/s"});
     }
 
     CHECK_CUDA(cudaFree(dce_out));

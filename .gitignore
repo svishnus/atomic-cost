@@ -1,2 +1,5 @@
 bench
 results.csv
+*.o
+*.ptx
+.claude/
